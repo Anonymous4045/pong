@@ -1,14 +1,15 @@
-import pygame
+import asyncio
 import random
 import time
 
+import pygame
 
-# from winsound import Beep as beep << do this if not on replit
+
 def beep(x, y):  # dont use out of replit
     return
 
 
-game_name = 'Pong'
+game_name = "Pong"
 
 WIDTH, HEIGHT = 1000, 500
 
@@ -17,9 +18,9 @@ pygame.font.init()
 display = pygame.display
 screen = display.set_mode((WIDTH, HEIGHT))
 
-# Assets
-PADDLE = pygame.image.load('./Assets/paddle.png')
-BALL = pygame.image.load('./Assets/ball.png')
+# assets
+PADDLE = pygame.image.load("assets/paddle.png")
+BALL = pygame.image.load("assets/ball.png")
 
 display.set_caption(game_name)
 display.set_icon(BALL)
@@ -50,13 +51,15 @@ def draw_dashed_line(surf, color, start_pos, end_pos, width=1, dash_length=10):
 
 
 class Button:
-    def __init__(self, name, message, foreground, background, size, x, y):
+    def __init__(self, sprites, name, message, foreground, background, size, x, y):
         sprites.append(self)
         self.name = name
         self.message = message
         self.foreground = foreground
         font = pygame.font.get_default_font()
-        self.text = pygame.font.Font(font, size).render(message, True, foreground, background)
+        self.text = pygame.font.Font(font, size).render(
+            message, True, foreground, background
+        )
         self.rect = self.text.get_rect()
         self.rect.center = x, y
 
@@ -66,7 +69,7 @@ class Button:
 
 
 class Text:
-    def __init__(self, name, message, foreground, background, size, x, y):
+    def __init__(self, sprites, name, message, foreground, background, size, x, y):
         sprites.append(self)
         self.name = name
         self.message = message
@@ -74,20 +77,24 @@ class Text:
         self.background = background
         self.font = pygame.font.get_default_font()
         self.size = size
-        self.text = pygame.font.Font(self.font, size).render(self.message, True, foreground, background)
+        self.text = pygame.font.Font(self.font, size).render(
+            self.message, True, foreground, background
+        )
         self.rect = self.text.get_rect()
         self.rect.center = x, y
 
     def set_message(self, message):
         self.message = str(message)
-        self.text = pygame.font.Font(self.font, self.size).render(self.message, True, self.foreground, self.background)
+        self.text = pygame.font.Font(self.font, self.size).render(
+            self.message, True, self.foreground, self.background
+        )
         self.rect = self.text.get_rect(center=self.rect.center)
 
     show = lambda self: screen.blit(self.text, self.rect)
 
 
 class Player:
-    def __init__(self, x):
+    def __init__(self, sprites, x):
         sprites.append(self)
         self.x = x
         self.y = HEIGHT // 2 - 32
@@ -101,7 +108,7 @@ class Player:
 
 
 class Ball:
-    def __init__(self):
+    def __init__(self, sprites):
         sprites.append(self)
         self.sprite = BALL
         self.x = WIDTH // 2 - 8
@@ -110,133 +117,177 @@ class Ball:
         self.direction = random.choice([1, -1])
 
     rect = lambda self: self.sprite.get_rect(topleft=(self.x, self.y))
-    change_slope = lambda self, user: (user.center() - self.center()) / 16 * (-1 if user == player else 1)
+    change_slope = (
+        lambda self, user, player: (user.center() - self.center())
+        / 16
+        * (-1 if user == player else 1)
+    )
     next = lambda self: round(self.direction * self.slope + self.y)
     center = lambda self: self.y + 8
     show = lambda self: screen.blit(self.sprite, (self.x, self.y))
 
 
-sprites = []
+async def main():
+    sprites = []
 
-title = Text('title', game_name, white, black, 100, WIDTH // 2, HEIGHT // 2 - 100)
-single_player = Button('single_player', 'Single Player', white, black, 64, WIDTH // 2, HEIGHT // 2)
-two_player = Button('two_player', 'Two Player', white, black, 64, WIDTH // 2, HEIGHT // 2 + 64 + 20)
+    title = Text(sprites, "title", game_name, white, black, 100, WIDTH // 2, HEIGHT // 2 - 100)
+    single_player = Button(
+        sprites, "single_player", "Single Player", white, black, 64, WIDTH // 2, HEIGHT // 2
+    )
+    two_player = Button(
+        sprites, "two_player", "Two Player", white, black, 64, WIDTH // 2, HEIGHT // 2 + 64 + 20
+    )
 
-menu = True
-while menu:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            print('Menu closed')
-            pygame.quit()
-            quit()
+    menu = True
+    while menu:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                print("Menu closed")
+                pygame.quit()
+                quit()
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            for sprite in sprites:
-                if isinstance(sprite, Button):
-                    menu = False
-                    if sprite.message == 'Single Player':
-                        if point_in_rect(event.pos, sprite.rect):
-                            bot = True
-                    else:
-                        if point_in_rect(event.pos, sprite.rect):
-                            bot = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for sprite in sprites:
+                    if isinstance(sprite, Button):
+                        menu = False
+                        if sprite.message == "Single Player":
+                            if point_in_rect(event.pos, sprite.rect):
+                                bot = True
+                        else:
+                            if point_in_rect(event.pos, sprite.rect):
+                                bot = False
 
-    screen.fill(black)
+        screen.fill(black)
 
-    for sprite in sprites:
-        sprite.show()
+        for sprite in sprites:
+            sprite.show()
 
-    pygame.display.update()
+        pygame.display.update()
+        await asyncio.sleep(0)
 
-w_down = s_down = up_down = down_down = False
+    w_down = s_down = up_down = down_down = False
 
-sprites = []
+    sprites = []
 
-player = Player(25)
-opponent = Player(WIDTH - 35)
-ball = Ball()
+    player = Player(sprites, 25)
+    opponent = Player(sprites, WIDTH - 35)
+    ball = Ball(sprites)
 
-size = 100
-p1_score = Text('p1_score', str(player.score), white, black, size, WIDTH // 2 - size // 2, size // 2)
-p2_score = Text('p2_score', str(opponent.score), white, black, size, WIDTH // 2 + size // 2, size // 2)
+    size = 100
+    p1_score = Text(
+        sprites, "p1_score", str(player.score), white, black, size, WIDTH // 2 - size // 2, size // 2
+    )
+    p2_score = Text(
+        sprites,
+        "p2_score",
+        str(opponent.score),
+        white,
+        black,
+        size,
+        WIDTH // 2 + size // 2,
+        size // 2,
+    )
 
-game_loop = True
-print(f'Starting {game_name}')
-while game_loop:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            print(f'{game_name} closed')
-            pygame.quit()
-            quit()
+    game_loop = True
+    print(f"Starting {game_name}")
+    while game_loop:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                print(f"{game_name} closed")
+                pygame.quit()
+                quit()
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w: w_down = True
-            if event.key == pygame.K_s: s_down = True
-            if event.key == 1073741906: up_down = True
-            if event.key == 1073741905: down_down = True
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_w: w_down = False
-            if event.key == pygame.K_s: s_down = False
-            if event.key == 1073741906: up_down = False
-            if event.key == 1073741905: down_down = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    w_down = True
+                if event.key == pygame.K_s:
+                    s_down = True
+                if event.key == 1073741906:
+                    up_down = True
+                if event.key == 1073741905:
+                    down_down = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_w:
+                    w_down = False
+                if event.key == pygame.K_s:
+                    s_down = False
+                if event.key == 1073741906:
+                    up_down = False
+                if event.key == 1073741905:
+                    down_down = False
 
-    if bot: opponent.y = ball.y - 32
+        if bot:
+            opponent.y = ball.y - 32
 
-    if w_down: player.y -= 3
-    if s_down: player.y += 3
-    if up_down: opponent.y -= 3
-    if down_down: opponent.y += 3
+        if w_down:
+            player.y -= 3
+        if s_down:
+            player.y += 3
+        if up_down:
+            opponent.y -= 3
+        if down_down:
+            opponent.y += 3
 
-    if player.y < 0: player.y = 0
-    if player.y >= HEIGHT - 64: player.y = HEIGHT - 64
-    if opponent.y < 0: opponent.y = 0
-    if opponent.y >= HEIGHT - 64: opponent.y = HEIGHT - 64
+        if player.y < 0:
+            player.y = 0
+        if player.y >= HEIGHT - 64:
+            player.y = HEIGHT - 64
+        if opponent.y < 0:
+            opponent.y = 0
+        if opponent.y >= HEIGHT - 64:
+            opponent.y = HEIGHT - 64
 
-    # Ball logic
-    if ball.rect().colliderect(player.rect()):
-        ball.direction *= -1
-        ball.slope = ball.change_slope(player)
-        beep(600, 100)
-    elif ball.rect().colliderect(opponent.rect()):
-        ball.direction *= -1
-        ball.slope = ball.change_slope(opponent)
-        beep(600, 100)
-    elif ball.x <= 0:
-        opponent.score += 1
-        sprites.remove(ball)
-        ball = Ball()
-        player.y = opponent.y = HEIGHT // 2
-        beep(700, 100)
-    elif ball.x >= WIDTH - 16:
-        player.score += 1
-        sprites.remove(ball)
-        ball = Ball()
-        player.y = opponent.y = HEIGHT // 2
-        beep(700, 100)
-    elif ball.y <= 0:
-        ball.slope *= -1
-        beep(500, 100)
-    elif ball.y >= HEIGHT - 16:
-        ball.slope *= -1
-        beep(500, 100)
+        # Ball logic
+        if ball.rect().colliderect(player.rect()):
+            ball.direction *= -1
+            ball.slope = ball.change_slope(player, opponent)
+            beep(600, 100)
+        elif ball.rect().colliderect(opponent.rect()):
+            ball.direction *= -1
+            ball.slope = ball.change_slope(opponent, player)
+            beep(600, 100)
+        elif ball.x <= 0:
+            opponent.score += 1
+            sprites.remove(ball)
+            ball = Ball(sprites)
+            player.y = opponent.y = HEIGHT // 2
+            beep(700, 100)
+        elif ball.x >= WIDTH - 16:
+            player.score += 1
+            sprites.remove(ball)
+            ball = Ball(sprites)
+            player.y = opponent.y = HEIGHT // 2
+            beep(700, 100)
+        elif ball.y <= 0:
+            ball.slope *= -1
+            beep(500, 100)
+        elif ball.y >= HEIGHT - 16:
+            ball.slope *= -1
+            beep(500, 100)
 
-    # Display
-    screen.fill(black)
-    draw_dashed_line(screen, white, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT))
+        # Display
+        screen.fill(black)
+        draw_dashed_line(screen, white, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT))
 
-    for sprite in sprites:
-        if isinstance(sprite, Text):
-            if sprite == p1_score:
-                message = player.score
-            else:
-                message = opponent.score
-            sprite.set_message(message)
-        sprite.show()
+        for sprite in sprites:
+            if isinstance(sprite, Text):
+                if sprite == p1_score:
+                    message = player.score
+                else:
+                    message = opponent.score
+                sprite.set_message(message)
+            sprite.show()
 
-    pygame.display.update()
+        pygame.display.update()
 
-    time.sleep(.01)
+        time.sleep(0.01)
 
-    # Post-Frame logic
-    ball.y = ball.next()
-    ball.x += 3 * ball.direction
+        # Post-Frame logic
+        ball.y = ball.next()
+        ball.x += 3 * ball.direction
+
+        await asyncio.sleep(0)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
